@@ -135,93 +135,129 @@
 
 ### Ответы на контрольные вопросы
 
-**1. Какие типы разрешений существуют в Android? В чём их отличие?**
+**1. В чём разница между нормальными и опасными разрешениями? Приведите примеры.**
 
-- **Нормальные разрешения (Normal)** — не представляют угрозы для приватности, предоставляются автоматически при установке (например, INTERNET, ACCESS_NETWORK_STATE)
-- **Опасные разрешения (Dangerous)** — дают доступ к конфиденциальным данным, требуют явного запроса у пользователя во время выполнения (например, CAMERA, READ_CONTACTS, ACCESS_FINE_LOCATION)
+| Тип разрешения | Описание | Примеры |
+|----------------|----------|---------|
+| **Нормальные (Normal)** | Не представляют угрозы для приватности пользователя. Предоставляются **автоматически** при установке приложения без запроса во время выполнения. | `INTERNET`, `ACCESS_NETWORK_STATE`, `VIBRATE`, `SET_ALARM`, `WAKE_LOCK` |
+| **Опасные (Dangerous)** | Дают доступ к конфиденциальным данным или функциям устройства (контакты, камера, местоположение). **Требуют явного запроса** у пользователя во время выполнения приложения (для Android 6.0+). | `CAMERA`, `READ_CONTACTS`, `ACCESS_FINE_LOCATION`, `RECORD_AUDIO`, `SEND_SMS`, `READ_EXTERNAL_STORAGE` |
 
-**2. Как запросить опасное разрешение во время выполнения приложения?**
+---
+
+**2. Как запросить опасное разрешение во время выполнения приложения? Опишите последовательность действий.**
+
+**Алгоритм запроса опасного разрешения:**
+
+1. **Объявить разрешение в `AndroidManifest.xml`:**
+3. **Проверить, есть ли уже разрешение:**
+4. **Опционально: объяснить пользователю, зачем нужно разрешение:**
+5. **Запросить разрешение:**
+6. **Обработать результат в `onRequestPermissionsResult()`:**
+
+---
+
+**3. Для чего нужен NotificationChannel в Android 8.0 и выше?**
+
+`NotificationChannel` (канал уведомлений) — обязательный компонент для отправки уведомлений, начиная с **Android 8.0 (API 26)**.
+
+**Назначение:**
+- Позволяет **группировать уведомления** по категориям (новости, сообщения, напоминания).
+- Даёт пользователю **гибкий контроль** над уведомлениями: можно отключить звук для определённого канала, изменить важность или полностью заблокировать уведомления из него.
+- Каждое уведомление **должно быть привязано к каналу**, иначе оно не отобразится на Android 8+.
+
+---
+
+**4. Как создать простое уведомление и отобразить его?**
+
+**Пошаговая инструкция:**
+
+1. **Создать канал уведомлений** (для Android 8+).
+2. **Построить уведомление** с помощью `NotificationCompat.Builder`.
+3. **Отправить уведомление** через `NotificationManagerCompat`.
+
+---
+
+**5. Какие методы класса Vibrator используются для создания вибрации? Как создать вибрацию с заданным паттерном?**
+
+**Основные методы `Vibrator`:**
+
+| Метод | Описание |
+|-------|----------|
+| `vibrate(milliseconds: Long)` | Вибрация заданной длительности (в мс). |
+| `vibrate(pattern: LongArray, repeat: Int)` | Вибрация по паттерну. `repeat` — индекс в массиве, с которого начать повтор (-1 — не повторять). |
+| `vibrate(effect: VibrationEffect)` | Вибрация с использованием `VibrationEffect` (для Android 8+). |
+| `cancel()` | Остановка вибрации. |
+| `hasVibrator()` | Проверка наличия вибромотора. |
+
+---
+
+**6. Как получить доступ к камере для предварительного просмотра? Какие классы для этого используются?**
+
+**Необходимые классы:**
+- **`Camera`** (устаревший, `android.hardware.Camera`) — простой API для базовых операций.
+- **`Camera2`** (`android.hardware.camera2`) — современный API с расширенными возможностями.
+- **`SurfaceView`** или **`TextureView`** — для отображения превью.
+- **`SurfaceHolder.Callback`** — для управления жизненным циклом поверхности.
+
+**Алгоритм (упрощённый, с `Camera`):**
+
+1. Добавить `SurfaceView` в разметку.
+2. Реализовать `SurfaceHolder.Callback` в Activity.
+3. В `surfaceCreated()` открыть камеру:
+```kotlin
+override fun surfaceCreated(holder: SurfaceHolder) {
+    camera = Camera.open()
+    camera?.setPreviewDisplay(holder)
+}
+```
+4. В `surfaceChanged()` запустить превью:
+```kotlin
+override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
+    camera?.startPreview()
+}
+```
+5. В `surfaceDestroyed()` освободить камеру:
+```kotlin
+override fun surfaceDestroyed(holder: SurfaceHolder) {
+    camera?.stopPreview()
+    camera?.release()
+    camera = null
+}
+```
+
+**Важно:** Для Android 6+ требуется запрос разрешения `CAMERA` во время выполнения.
+
+---
+
+**7. Что произойдёт, если попытаться использовать опасное разрешение без его запроса во время выполнения на Android 6.0+?**
+
+При попытке выполнить операцию, требующую опасного разрешения, без его предварительного запроса:
+
+- **Приложение выбросит исключение `SecurityException`** с сообщением о недостатке прав.
+- В некоторых случаях (например, при вызове `Camera.open()`) приложение **аварийно завершится (краш)**.
+
+**Правильное поведение:**
+- Объявить разрешение в манифесте.
+- Запросить его во время выполнения через `requestPermissions()`.
+- Только после получения разрешения выполнять защищённую операцию.
+
+---
+
+**8. Как проверить, есть ли у приложения определённое разрешение в данный момент?**
+
+Используется метод `ContextCompat.checkSelfPermission()`:
 
 ```kotlin
 if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-    != PackageManager.PERMISSION_GRANTED) {
-    ActivityCompat.requestPermissions(this, 
-        arrayOf(Manifest.permission.CAMERA), 
-        REQUEST_CODE)
+    == PackageManager.PERMISSION_GRANTED) {
+    // Разрешение есть — можно работать с камерой
+    openCamera()
 } else {
-    // Разрешение уже есть
+    // Разрешения нет — нужно запросить
+    requestCameraPermission()
 }
 ```
 
-**3. Какие методы необходимо переопределить для обработки результата запроса разрешения?**
-
-Необходимо переопределить метод `onRequestPermissionsResult()`:
-```kotlin
-override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-    if (requestCode == REQUEST_CODE) {
-        if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            // Разрешение получено
-        } else {
-            // Разрешение отклонено
-        }
-    }
-}
-```
-
-**4. Как создать канал уведомлений для Android 8.0 и выше?**
-
-```kotlin
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-    val channel = NotificationChannel(
-        CHANNEL_ID,
-        "Название канала",
-        NotificationManager.IMPORTANCE_HIGH
-    ).apply {
-        description = "Описание канала"
-    }
-    val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-    manager.createNotificationChannel(channel)
-}
-```
-
-**5. Как отправить уведомление пользователю?**
-
-```kotlin
-val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-    .setSmallIcon(android.R.drawable.ic_dialog_info)
-    .setContentTitle("Заголовок")
-    .setContentText("Текст уведомления")
-    .setPriority(NotificationCompat.PRIORITY_HIGH)
-    .setAutoCancel(true)
-    .build()
-
-val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-manager.notify(NOTIFICATION_ID, notification)
-```
-
-**6. Как реализовать вибрацию устройства?**
-
-```kotlin
-val vibrator = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-    vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
-} else {
-    vibrator.vibrate(500)
-}
-```
-
-**7. Какие разрешения необходимы для работы с камерой?**
-
-- `android.permission.CAMERA` — опасное разрешение, требуется запрос во время выполнения
-- В `AndroidManifest.xml` также нужно указать:
-```xml
-<uses-feature android:name="android.hardware.camera" android:required="true" />
-```
-
-**8. Как отобразить предварительный просмотр с камеры?**
-
-Для отображения предварительного просмотра необходимо:
-1. Добавить `SurfaceView` в разметку
-2. Получить доступ к камере через `Camera` или `CameraX`
-3. Установить SurfaceHolder.Callback для обработки событий поверхности
-4. В методе `surfaceCreated()` открыть камеру и начать предварительный просмотр
+**Возвращаемые значения:**
+- `PackageManager.PERMISSION_GRANTED` (0) — разрешение предоставлено.
+- `PackageManager.PERMISSION_DENIED` (-1) — разрешение отклонено или ещё не запрашивалось.
